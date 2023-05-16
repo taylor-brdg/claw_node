@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="initial-scale=1">
+<link rel="shortcut icon" href="data:image/x-icon;," type="image/x-icon">
+<title>test</title>
+<style>
+* {
+	padding: 0;
+	border: 0;
+	margin: 0;
+	font-family: sans-serif;
+	user-select: none;
+}
+body {
+	background-color: #333;
+}
+#barcode {
+	display: none;
+	padding: 20px;
+	margin: 20px;
+	background-color: #fff;
+}
+#activate, #controls {
+	display: none;
+	padding: 10px;
+	margin-left: 10px;
+}
+#activate, #controls div {
+	display: inline-block;
+	width: 40px;
+	height: 40px;
+	margin-right: 10px;
+	border-radius: 10px;
+	background-color: #000;
+	overflow: hidden;
+}
+#activate {
+	width: 40px;
+	height: 40px;
+	margin: 20px 0 0 20px;
+}
+#activate span {
+	position: relative;
+	top: -19px;
+	left: -6px;
+	font-size: 55px;
+	font-weight: bold;
+	color: #fff;
+}
+#controls div span {
+	position: relative;
+	top: -21px;
+	left: -6px;
+	font-size: 55px;
+	font-weight: bold;
+	color: #fff;
+}
+#controls div#button-claw span {
+	font-size: 35px;
+	top: -3px;
+	left: 2px;
+}
+</style>
+</head>
+<body>
+<div id="activate"><span>&#x27a4;</span></div>
+<svg id="barcode"></svg>
+<div id="controls">
+	<div id="button-up"><span>&#x23f6;</span></div>
+	<div id="button-left"><span>&#x23f4;</span></div>
+	<div id="button-right"><span>&#x23f5;</span></div>
+	<div id="button-down"><span>&#x23f7;</span></div>
+	<div id="button-claw"><span>&#x26db;</span></div>
+</div>
+<script src="code128.js"></script>
+<script charset="UTF-8">
+const baseUrl = window.location.origin;
+const urlParams = new URLSearchParams( window.location.search );
+const locationName = urlParams.get( 'where' );
+const webSocketUrl = baseUrl.replace( /http(s?):\/\//, 'ws$1://' );
+let webSocket = null;
+let uniqueId = '';
+let controlData = {
+	'action': 'control',
+	'unique': '',
+	'up': false,
+	'down': false,
+	'left': false,
+	'right': false,
+	'claw': false
+};
+const connectSocket = () => {
+	webSocket = new WebSocket( webSocketUrl + '?where=' + locationName );
+	webSocket.addEventListener( 'message', ( event ) => {		
+		let data = null;
+		try { data = JSON.parse( event.data ); }
+			catch( ex ) { data = null; }
+		if( data && 'undefined' !== typeof data.action ) {
+			switch( data.action ) {
+				case 'connect':
+					uniqueId = data.unique;
+					controlData.unique = uniqueId;
+					showBarcode();
+					console.log( uniqueId );
+					break;
+				case 'start':
+					showControls();
+					break;
+			}
+		}
+	} );
+};
+const showBarcode = () => {
+	setTimeout( () => {
+		document.getElementById( 'barcode' ).style.display = 'block';
+	}, 0 );
+	JsBarcode( '#barcode', '' + uniqueId, {
+		'format': 'code128',
+		'lineColor': '#000',
+		'width': 3,
+		'height': 75,
+		'margin': 0,
+		'displayValue': false
+	} );
+};
+const showControls = () => {
+	setTimeout( () => {
+		document.getElementById( 'controls' ).style.display = 'block';
+	}, 0 );
+};
+const sendControls = () => {
+	webSocket.send( JSON.stringify( controlData ) );
+};
+const sendControl = ( whichControl, newValue ) => {
+	controlData[ whichControl ] = newValue;
+	sendControls();
+};
+window.addEventListener( 'load', ( event ) => {
+	if( !locationName ) {
+		alert( 'location not provided. ?where= expected in URL' );
+		return;
+	}
+	const activateEl = document.getElementById( 'activate' );
+	activateEl.addEventListener( 'click', ( event ) => {
+		event.preventDefault();
+		activateEl.style.display = 'none';
+		connectSocket();
+	} );
+	[ 'up', 'down', 'left', 'right', 'claw' ].forEach( ( name ) => {
+		const el = document.getElementById( 'button-' + name );
+		el.addEventListener( 'mousedown', ( event ) => {
+			event.preventDefault();
+			sendControl( name, true );
+		} );
+		el.addEventListener( 'mouseup', ( event ) => {
+			event.preventDefault();
+			sendControl( name, false );
+		} );
+	} );
+} );
+</script>
+</body>
+</html>

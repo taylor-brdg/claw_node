@@ -1,0 +1,6 @@
+{
+  "http_port": 443,
+  "max_idle": 2700,
+  "sessions_file": "sessions.json",
+  "unique_length": 8
+}
