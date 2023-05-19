@@ -23,8 +23,10 @@ setInterval( () => {
 	for( const uniqueId in idle ) {
 		idle[ uniqueId ]++;
 		if( config.max_idle == idle[ uniqueId ] ) {
-			clients[ uniqueId ].terminate();
-			delete( clients[ uniqueId ] );
+			if( uniqueId in clients ) {
+				clients[ uniqueId ].terminate();
+				delete( clients[ uniqueId ] );
+			}
 			delete( locations[ uniqueId ] );
 			delete( idle[ uniqueId ] );
 			const num = Object.keys( clients ).length;
